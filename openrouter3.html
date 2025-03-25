@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek Chat v3 (Local)</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #f5f5f5; 
+            line-height: 1.6;
+        }
+        
+        #chatBox { 
+            height: 650px; 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            overflow-y: auto; 
+            margin-bottom: 15px; 
+            background: white; 
+            border-radius: 10px; 
+        }
+        
+        .user-message { 
+            background: #4a6fa5; 
+            color: white; 
+            padding: 12px 16px; 
+            margin: 10px 0; 
+            border-radius: 18px 18px 0 18px; 
+            max-width: 80%; 
+            float: right; 
+            clear: both; 
+            line-height: 1.5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .bot-message { 
+            background: #f8f9fa; 
+            color: #333; 
+            padding: 12px 16px; 
+            margin: 10px 0; 
+            border-radius: 18px 18px 18px 0; 
+            max-width: 80%; 
+            float: left; 
+            clear: both; 
+            line-height: 1.5;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+        }
+        
+        /* Technical Content Styling */
+        .tech-content {
+            background: #f0f7ff;
+            border-left: 4px solid #4a6fa5;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .formula {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            display: block;
+            margin: 10px 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .result-box {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        
+        .warning-note {
+            background: #fff3e0;
+            border-left: 4px solid #ffa000;
+            padding: 12px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        /* Markdown Content */
+        .markdown-content {
+            overflow-x: auto;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.3em;
+            color: #4a6fa5;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.1em;
+            color: #4a6fa5;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .markdown-content ul, 
+        .markdown-content ol,
+        .tech-content ul,
+        .tech-content ol {
+            padding-left: 25px;
+            margin: 10px 0;
+        }
+        
+        .markdown-content li,
+        .tech-content li {
+            margin-bottom: 8px;
+        }
+        
+        .markdown-content pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .markdown-content code {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 3px solid #4a6fa5;
+            padding-left: 15px;
+            margin-left: 0;
+            color: #555;
+        }
+        
+        /* Input Area */
+        #inputArea { 
+            display: flex; 
+            gap: 10px; 
+        }
+        
+        #userInput { 
+            flex: 1; 
+            padding: 12px; 
+            border: 2px solid #ddd; 
+            border-radius: 20px; 
+            outline: none; 
+            font-size: 16px; 
+        }
+        
+        #sendButton { 
+            padding: 12px 25px; 
+            background: #4a6fa5; 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: background 0.2s;
+        }
+        
+        #sendButton:hover {
+            background: #3a5a80;
+        }
+        
+        #sendButton:disabled { 
+            background: #aaa; 
+            cursor: not-allowed;
+        }
+        
+        .typing-indicator { 
+            color: #666; 
+            font-style: italic; 
+        }
+
+        .pdf-link {
+            color: #4a6fa5;
+            text-decoration: underline;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        .pdf-link:hover {
+            color: #3a5a80;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: #4a6fa5; text-align: center;">DeepSeek Chat v3</h1>
+    <div id="chatBox"></div>
+    <div id="inputArea">
+        <input type="text" id="userInput" placeholder="Ketik pesan..." autocomplete="off">
+        <button id="sendButton">Kirim</button>
+        <button id="clearChat" style="display: block; margin: 10px auto; padding: 8px 15px; background: #ff6b6b; color: white; border: none; border-radius: 20px;">Bersihkan Chat</button>
+    </div>
+
+    <script>
+        // Config
+        const OPENROUTER_API_KEY = "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";
+        const MODEL = "deepseek/deepseek-chat-v3-0324:free";
+
+        // DOM Elements
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearChat = document.getElementById('clearChat');
+
+        // Keyword mapping and PDF links
+        const keywordMapping = {
+            "gula": ["sop gula", "analisis gula", "kadar gula"],
+            "pekerjaan B": ["pekerjaan B", "analisis B", "cara kerja B"]
+        };
+
+        const pdfLinks = {
+            "gula": "https://drive.google.com/file/d/1_b6LmcBvvagLvxDRQ02-UoVLylKX9MeX/view?usp=drive_link",
+            "pekerjaan B": "https://drive.google.com/uc?id=7G8H9I0J1K2L"
+        };
+
+        // Daftar keyword terlarang HANYA untuk pemrograman
+        const blockedKeywords = [
+            'javascript', 'python', 'java\\b', 'c\\+\\+', 'c#', 'php',
+            'html', 'css', 'react', 'vue', 'node\\.js', 'express',
+            'django', 'flask', 'ruby', 'rails', 'sql', 'mysql',
+            'mongoDB', 'postgresql', 'typescript', 'nextjs', 'appscript',
+            '\\bscript\\b', '\\bcoding\\b', '\\bprogramming\\b'
+        ];
+
+        // Fungsi deteksi yang lebih cerdas
+        function containsBlockedContent(text) {
+            // Hanya cek keyword pemrograman dengan regex exact match
+            const blockedRegex = new RegExp(`\\b(${blockedKeywords.join('|')})\\b`, 'i');
+            return blockedRegex.test(text);
+        }
+
+        // Conversation History (removed programming restrictions)
+        let conversationHistory = [
+            { 
+                role: "system", 
+                content: "Anda adalah DeepSeek AI asisten umum. Mohon gunakan Bahasa Indonesia yang santun dan informatif.\n\n" +
+                        "Format respon:\n" +
+                        "Untuk jawaban biasa, gunakan format Markdown standar (heading, list, bold).\n\n" +
+                        "Untuk pertanyaan teknis/kimia (seperti perhitungan molaritas), gunakan format khusus:\n" +
+                        "### [Judul Pertanyaan]\n" +
+                        "<div class='tech-content'>\n" +
+                        "**1. Parameter Dasar**\n" +
+                        "- Poin penting 1\n" +
+                        "- Poin penting 2\n\n" +
+                        "**2. Perhitungan**\n" +
+                        "```formula\n[rumus matematika]\n```\n\n" +
+                        "**3. Hasil**\n" +
+                        "```result\n[jawaban akhir]\n```\n" +
+                        "</div>\n\n" +
+                        "**Catatan**: ```warning\n[informasi penting]\n```"
+            }
+        ];
+
+        // Variables for typing animation
+        let typingAnimationInterval;
+        let currentTypingMessage = null;
+
+        // Function to check blocked keywords
+        function containsBlockedContent(text) {
+            return blockedKeywords.some(keyword => 
+                text.toLowerCase().includes(keyword.toLowerCase())
+            );
+        }
+
+        // Add message to chat with typing animation
+        function addMessage(text, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isUser ? 'user-message' : 'bot-message';
+            
+            if (isUser) {
+                messageDiv.textContent = text;
+            } else {
+                // Create a container for content
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'markdown-content';
+                
+                // Enhanced markdown to HTML conversion
+                let htmlContent = text
+                    // Technical content wrapper
+                    .replace(/<div class='tech-content'>([\s\S]*?)<\/div>/g, '<div class="tech-content">$1</div>')
+                    // Headings
+                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                    // Lists
+                    .replace(/^\* (.*$)/gm, '<li>$1</li>')
+                    // Code/formula blocks
+                    .replace(/```formula\n([\s\S]*?)```/g, '<div class="formula">$1</div>')
+                    .replace(/```result\n([\s\S]*?)```/g, '<div class="result-box">$1</div>')
+                    .replace(/```warning\n([\s\S]*?)```/g, '<div class="warning-note">$1</div>')
+                    // Inline formatting
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code>$1</code>')
+                    // Line breaks
+                    .replace(/\n/g, '<br>');
+                
+                // Properly wrap lists
+                htmlContent = htmlContent.replace(/(<li>.*?<\/li>)+/g, function(match) {
+                    return '<ul>' + match + '</ul>';
+                });
+                
+                contentDiv.innerHTML = htmlContent;
+                messageDiv.appendChild(contentDiv);
+            }
+            
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Modified sendMessage function
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            if (containsBlockedContent(message)) {
+                addMessage("Maaf, saya tidak bisa membantu pertanyaan terkait pemrograman.", false);
+                userInput.value = '';
+                return;
+            }
+
+            // Check for PDF keywords
+            const matchedKeyword = checkForPdfKeywords(message);
+            if (matchedKeyword) {
+                sendPdfResponse(matchedKeyword);
+                userInput.value = '';
+                return;
+            }
+
+            addMessage(message, true);
+            userInput.value = '';
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            conversationHistory.push({ role: "user", content: message });
+
+            // Typing indicator
+            let dots = 0;
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'bot-message typing-indicator';
+            chatBox.appendChild(typingIndicator);
+            
+            typingAnimationInterval = setInterval(() => {
+                dots = (dots + 1) % 4;
+                typingIndicator.textContent = "Mengetik" + ".".repeat(dots);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 300);
+
+            try {
+                // Gunakan requestIdleCallback untuk background tab
+                const fetchData = () => fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "http://localhost",
+                        "X-Title": "DeepSeek Local Test"
+                    },
+                    body: JSON.stringify({
+                        model: MODEL,
+                        messages: conversationHistory,
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                const response = document.hidden 
+                    ? await new Promise(resolve => {
+                        requestIdleCallback(async () => {
+                            resolve(await fetchData());
+                        }, { timeout: 1000 });
+                      })
+                    : await fetchData();
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+                let aiResponse = data.choices[0]?.message?.content || "Maaf, terjadi kesalahan.";
+                
+                clearInterval(typingAnimationInterval);
+                typingIndicator.remove();
+                
+                addMessage(aiResponse, false, true);
+                conversationHistory.push({ role: "assistant", content: aiResponse });
+
+            } catch (error) {
+                console.error("Error:", error);
+                clearInterval(typingAnimationInterval);
+                addMessage(`Error: ${e.message}`, false);
+            } finally {
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // Helper function to check for PDF keywords
+        function checkForPdfKeywords(message) {
+            const lowerMessage = message.toLowerCase();
+            for (const [mainKeyword, keywords] of Object.entries(keywordMapping)) {
+                if (keywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()))) {
+                    return mainKeyword;
+                }
+            }
+            return null;
+        }
+
+        // Function to send PDF response
+        function sendPdfResponse(keyword) {
+            const pdfUrl = pdfLinks[keyword];
+            const pdfName = keyword === "gula" ? "Dokumen SOP Gula" : "Dokumen Pekerjaan B";
+            
+            const responseMessage = `Saya menemukan referensi untuk <strong>${keyword}</strong>. ` +
+                                   `Anda dapat mengunduh dokumen terkait: ` +
+                                   `<a href="${pdfUrl}" target="_blank" class="pdf-link">${pdfName}</a>`;
+            
+            addMessage(responseMessage, false);
+        }
+
+        // Clear chat function with automatic greeting
+        function clearChatHistory() {
+            // Clear any ongoing typing animation
+            if (typingAnimationInterval) clearInterval(typingAnimationInterval);
+            if (currentTypingMessage) {
+                currentTypingMessage.remove();
+                currentTypingMessage = null;
+            }
+            
+            chatBox.innerHTML = '';
+            conversationHistory = conversationHistory.slice(0, 1); // Keep only system prompt
+            
+            // Add automatic greeting after clearing
+            setTimeout(() => {
+                addMessage("Halo! Saya DeepSeek AI. Silakan ajukan pertanyaan umum atau pertanyaan sains dasar.", false);
+            }, 300);
+        }
+
+        // Event Listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        clearChat.addEventListener('click', clearChatHistory);
+
+        // Initial greeting
+        setTimeout(() => {
+            addMessage("Halo! Saya DeepSeek AI. Silakan ajukan pertanyaan umum atau pertanyaan sains dasar.", false);
+        }, 800);
+    </script>
+</body>
+</html>
